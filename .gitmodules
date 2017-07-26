@@ -1,0 +1,6 @@
+[submodule "api/auth-facebook-service-api"]
+	path = api/auth-facebook-service-api
+	url = git@github.com:hypertino/auth-facebook-service-api.git
+[submodule "api/user-service-api"]
+	path = api/user-service-api
+	url = git@github.com:hypertino/user-service-api.git
