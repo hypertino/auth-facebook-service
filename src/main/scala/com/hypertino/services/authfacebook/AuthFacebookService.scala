@@ -2,13 +2,12 @@ package com.hypertino.services.authfacebook
 
 import java.nio.charset.StandardCharsets
 
-import com.hypertino.authfacebook.api.{PrivilegeValidationsPost, ValidationResult, ValidationsPost}
-import com.hypertino.authfacebook.apiref.user.UsersGet
+import com.hypertino.authfacebook.api.{ValidationResult, ValidationsPost}
 import com.hypertino.binders.json.DefaultJsonBindersFactory
 import com.hypertino.binders.value.{Null, Obj}
 import com.hypertino.hyperbus.Hyperbus
 import com.hypertino.hyperbus.model.{BadRequest, Created, ErrorBody, MessagingContext, Ok, ResponseBase, Unauthorized}
-import com.hypertino.inflector.naming.{CamelCaseToSnakeCaseConverter, SnakeCaseToCamelCaseConverter}
+import com.hypertino.inflector.naming.CamelCaseToSnakeCaseConverter
 import com.hypertino.service.control.api.Service
 import com.typesafe.config.Config
 import monix.eval.Task
@@ -51,7 +50,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
   // todo: support scheme configuration + backward compatibility?
   private val handlers = hyperbus.subscribe(this, log)
 
-  def onPrivilegeValidationsPost(implicit post: PrivilegeValidationsPost): Task[ResponseBase] = {
+  def onValidationsPost(implicit post: ValidationsPost): Task[ResponseBase] = {
     validateAuthorizationHeader(post.body.authorization).map { facebookUserId ⇒
       Created(ValidationResult(
         identityKeys = Obj.from(
@@ -59,33 +58,6 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
         ),
         extra = Null
       ))
-    }
-  }
-
-  def onValidationsPost(implicit post: ValidationsPost): Task[ResponseBase] = {
-    validateAuthorizationHeader(post.body.authorization).flatMap { facebookUserId ⇒
-      hyperbus
-        .ask(UsersGet(fields = Some(Seq("user_id", fbuName)),
-          $query = Obj.from(fbuName → facebookUserId)))
-        .map {
-          case Ok(users, _) ⇒ {
-            val r: ResponseBase =
-              if (users.items.isEmpty || users.items.tail.nonEmpty) {
-                Unauthorized(ErrorBody("user-not-found", Some(s"User with facebookUserId='$facebookUserId' is not found")))
-              }
-              else {
-                val user = users.items.head
-                Created(ValidationResult(
-                  identityKeys = Obj.from(
-                    fbuName → facebookUserId,
-                    "user_id" → user.userId
-                  ),
-                  extra = Null
-                ))
-              }
-            r
-          }
-        }
     }
   }
 
@@ -137,7 +109,6 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
     lf.addListener(new Runnable {
       override def run(): Unit = {
         val r = Try(lf.get())
-        println(s"YYYYA", r)
         callback(r)
       }
     }, null)
@@ -147,6 +118,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
   }
 
   override def stopService(controlBreak: Boolean, timeout: FiniteDuration): Future[Unit] = Future {
+    asyncHttpClient.close()
     handlers.foreach(_.cancel())
     log.info("AuthFacebookService stopped")
   }

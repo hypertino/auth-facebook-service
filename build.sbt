@@ -25,11 +25,6 @@ lazy val `auth-service` = project in file(".") enablePlugins Raml2Hyperbus setti
         path = "api/auth-facebook-service-api/auth-facebook.raml",
         packageName = "com.hypertino.authfacebook.api",
         isResource = false
-      ),
-      ramlSource(
-        path = "api/auth-facebook-service-api/expects/user.raml",
-        packageName = "com.hypertino.authfacebook.apiref.user",
-        isResource = false
       )
     )
 )

@@ -1,13 +1,11 @@
 package com.hypertino.services.authfacebook
 
-import com.hypertino.authfacebook.api.{PrivilegeValidationsPost, Validation, ValidationsPost}
-import com.hypertino.authfacebook.apiref.user.{User, UserCollection, UsersGet}
+import com.hypertino.authfacebook.api.{Validation, ValidationsPost}
 import com.hypertino.binders.value.Obj
 import com.hypertino.hyperbus.Hyperbus
-import com.hypertino.hyperbus.model.{Created, ErrorBody, MessagingContext, Ok, ResponseBase, Unauthorized}
+import com.hypertino.hyperbus.model.{Created, ErrorBody, MessagingContext, Unauthorized}
 import com.hypertino.service.config.ConfigLoader
 import com.typesafe.config.Config
-import monix.eval.Task
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Span}
@@ -25,22 +23,9 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
 
   val config = inject[Config]
   val hyperbus = inject[Hyperbus]
-  val handlers = hyperbus.subscribe(this)
   val fbTestUserId = config.getString("facebook.test-user-id")
   val fbTestUserToken = config.getString("facebook.test-user-token")
   val fbTestUserToken2 = config.getString("facebook.test-user-token2")
-
-  def onUsersGet(implicit get: UsersGet) = Task.eval[ResponseBase] {
-    val fbUserId = get.headers.hrl.query.facebook_user_id
-    if (fbUserId.toString == fbTestUserId) {
-      Ok(UserCollection(Seq(User(
-        userId = "100500",
-        facebookUserId = Some(fbTestUserId)
-      ))))
-    } else {
-      Ok(UserCollection(Seq.empty))
-    }
-  }
 
   val service = new AuthFacebookService()
 
@@ -51,46 +36,9 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
 
   override implicit val patienceConfig = new PatienceConfig(scaled(Span(3000, Millis)))
 
-  "AuthFacebookService" should "authorize if token is valid" in {
+  "AuthFacebookService" should "validate if token is valid" in {
     val r = hyperbus
       .ask(ValidationsPost(Validation(s"Facebook $fbTestUserToken")))
-      .runAsync
-      .futureValue
-
-    r shouldBe a[Created[_]]
-    r.body.identityKeys shouldBe Obj.from(
-      "facebook_user_id" → fbTestUserId,
-      "user_id" → "100500"
-    )
-  }
-
-  "AuthFacebookService" should "not authorize if token isn't valid" in {
-    val r = hyperbus
-      .ask(ValidationsPost(Validation("Facebook ABCDE")))
-      .runAsync
-      .failed
-      .futureValue
-
-    r shouldBe a[Unauthorized[_]]
-    val b = r.asInstanceOf[Unauthorized[ErrorBody]].body
-    b.code shouldBe "facebook-token-is-not-valid"
-  }
-
-  "AuthFacebookService" should "not authorize if token is valid but user doesn't exists" in {
-    val r = hyperbus
-      .ask(ValidationsPost(Validation(s"Facebook $fbTestUserToken2")))
-      .runAsync
-      .failed
-      .futureValue
-
-    r shouldBe a[Unauthorized[_]]
-    val b = r.asInstanceOf[Unauthorized[ErrorBody]].body
-    b.code shouldBe "user-not-found"
-  }
-
-  "AuthFacebookService" should "validate privilege if token is valid" in {
-    val r = hyperbus
-      .ask(PrivilegeValidationsPost(Validation(s"Facebook $fbTestUserToken")))
       .runAsync
       .futureValue
 
@@ -100,7 +48,7 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
     )
   }
 
-  "AuthFacebookService" should "not authorize privilege validation if token isn't valid" in {
+  "AuthFacebookService" should "not authorize if token isn't valid" in {
     val r = hyperbus
       .ask(ValidationsPost(Validation("Facebook ABCDE")))
       .runAsync
