@@ -1,9 +1,11 @@
 package com.hypertino.services.authfacebook
 
 import com.hypertino.authfacebook.api.{Validation, ValidationsPost}
+import com.hypertino.binders.json.DefaultJsonBindersFactory
 import com.hypertino.binders.value.Obj
 import com.hypertino.hyperbus.Hyperbus
 import com.hypertino.hyperbus.model.{Created, ErrorBody, MessagingContext, Unauthorized}
+import com.hypertino.inflector.naming.CamelCaseToSnakeCaseConverter
 import com.hypertino.service.config.ConfigLoader
 import com.typesafe.config.Config
 import monix.execution.Scheduler
@@ -48,7 +50,7 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
     )
   }
 
-  "AuthFacebookService" should "not authorize if token isn't valid" in {
+  it should "not authorize if token isn't valid" in {
     val r = hyperbus
       .ask(ValidationsPost(Validation("Facebook ABCDE")))
       .runAsync
@@ -58,5 +60,16 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
     r shouldBe a[Unauthorized[_]]
     val b = r.asInstanceOf[Unauthorized[ErrorBody]].body
     b.code shouldBe "facebook-token-is-not-valid"
+  }
+
+  "TokenDebugResultData" should "deserialize" in {
+    val s =
+      """
+        {"data":{"app_id":"1559926294081781","application":"elbi-v2-dev","expires_at":1506630323,"is_valid":true,"issued_at":1501446323,"metadata":{"auth_type":"rerequest","sso":"iphone-safari"},"scopes":["email","public_profile"],"user_id":"101396227229647"}}
+      """
+
+    import com.hypertino.binders.json.JsonBinders._
+    implicit val jsonFactory = new DefaultJsonBindersFactory[CamelCaseToSnakeCaseConverter.type]()
+    s.parseJson[TokenDebugResultData].data
   }
 }

@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets
 
 import com.hypertino.authfacebook.api.{ValidationResult, ValidationsPost}
 import com.hypertino.binders.json.DefaultJsonBindersFactory
-import com.hypertino.binders.value.{Null, Obj}
+import com.hypertino.binders.value.{Null, Obj, Value}
 import com.hypertino.hyperbus.Hyperbus
 import com.hypertino.hyperbus.model.{BadRequest, Created, ErrorBody, MessagingContext, Ok, ResponseBase, Unauthorized}
 import com.hypertino.inflector.naming.CamelCaseToSnakeCaseConverter
@@ -18,19 +18,22 @@ import scaldi.{Injectable, Injector}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
-import scala.util.Try
+import scala.util.{Success, Try}
 import scala.util.control.NonFatal
 
 private[authfacebook] case class AuthFacebookServiceConfig(appId: String, appToken: String)
 private[authfacebook] case class TokenDebugResult(
                                                  appId: String,
                                                  application: String,
-                                                 expiresAt: Long,
+                                                 expiresAt: Option[Long],
                                                  isValid: Boolean,
                                                  issuedAt: Option[Long],
                                                  scopes: Seq[String],
                                                  userId: String
                                                  )
+
+private[authfacebook] case class TokenDebugResultData(data: TokenDebugResult)
+
 //private[authfacebook] case class AccessTokenValidationResult(facebookUserId: String)
 
 class AuthFacebookService(implicit val injector: Injector) extends Service with Injectable {
@@ -86,13 +89,13 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
     taskFromListenableFuture(get.execute()).map { httpResponse ⇒
       if (httpResponse.getStatusCode == 200) {
         import com.hypertino.binders.json.JsonBinders._
-        val result = httpResponse.getResponseBody(StandardCharsets.UTF_8).parseJson[TokenDebugResult]
-        if (result.isValid && result.appId == serviceConfig.appId) {
-          Some(result.userId)
-        }
-        else {
-          log.debug(s"Facebook token is not valid: $result")
-          None
+        val jsonString = httpResponse.getResponseBody(StandardCharsets.UTF_8)
+        Try(jsonString.parseJson[TokenDebugResultData].data) match {
+          case Success(t) if t.isValid && t.appId == serviceConfig.appId ⇒
+            Some(t.userId)
+          case _ ⇒
+            log.debug(s"Facebook token is not valid: $jsonString")
+            None
         }
       }
       else {
