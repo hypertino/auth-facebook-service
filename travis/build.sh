@@ -6,9 +6,9 @@ if [[ "$TRAVIS_PULL_REQUEST" == "false" && "$TRAVIS_BRANCH" == "master" ]]; then
   echo "$key_password" | gpg --passphrase-fd 0 ./travis/ht-oss-private.asc.gpg
 
   if grep "version\s*:=.*SNAPSHOT" build.sbt; then
-    sbt ++$TRAVIS_SCALA_VERSION test publishSigned
+    sbt ++$TRAVIS_SCALA_VERSION compile publishSigned
   else
-    sbt ++$TRAVIS_SCALA_VERSION test publishSigned
+    sbt ++$TRAVIS_SCALA_VERSION compile publishSigned
   	# wait different time for different jobs, due to race condition releasing in sonatype
   	if [[ "$TRAVIS_JOB_NUMBER" =~ ^[[:digit:]]+\.([[:digit:]]+)$ ]]; then
   		job_number=${BASH_REMATCH[1]}

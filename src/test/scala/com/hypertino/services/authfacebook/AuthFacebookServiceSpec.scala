@@ -38,7 +38,7 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
 
   override implicit val patienceConfig = new PatienceConfig(scaled(Span(3000, Millis)))
 
-  ignore should "validate if token is valid" in {
+  "AuthFacebookService" should "validate if token is valid" in {
     val r = hyperbus
       .ask(ValidationsPost(Validation(s"Facebook $fbTestUserToken")))
       .runAsync
@@ -50,7 +50,7 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
     )
   }
 
-  ignore should "not authorize if token isn't valid" in {
+  it should "not authorize if token isn't valid" in {
     val r = hyperbus
       .ask(ValidationsPost(Validation("Facebook ABCDE")))
       .runAsync
