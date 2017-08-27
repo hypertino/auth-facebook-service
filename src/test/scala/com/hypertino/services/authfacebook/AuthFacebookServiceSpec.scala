@@ -2,7 +2,7 @@ package com.hypertino.services.authfacebook
 
 import com.hypertino.authfacebook.api.{Validation, ValidationsPost}
 import com.hypertino.binders.json.DefaultJsonBindersFactory
-import com.hypertino.binders.value.Obj
+import com.hypertino.binders.value.{Obj, Text}
 import com.hypertino.hyperbus.Hyperbus
 import com.hypertino.hyperbus.model.{Created, ErrorBody, MessagingContext, Unauthorized}
 import com.hypertino.inflector.naming.CamelCaseToSnakeCaseConverter
@@ -27,7 +27,7 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
   val hyperbus = inject[Hyperbus]
   val fbTestUserId = config.getString("facebook.test-user-id")
   val fbTestUserToken = config.getString("facebook.test-user-token")
-  val fbTestUserToken2 = config.getString("facebook.test-user-token2")
+//  val fbTestUserToken2 = config.getString("facebook.test-user-token2")
 
   val service = new AuthFacebookService()
 
@@ -45,9 +45,9 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
       .futureValue
 
     r shouldBe a[Created[_]]
-    r.body.identityKeys shouldBe Obj.from(
-      "facebook_user_id" → fbTestUserId
-    )
+    r.body.identityKeys.facebook_user_id shouldBe Text(fbTestUserId)
+    r.body.identityKeys.email shouldBe a[Text]
+    // println(r)
   }
 
   it should "not authorize if token isn't valid" in {
