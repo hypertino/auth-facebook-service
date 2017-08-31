@@ -5,6 +5,7 @@ import com.hypertino.binders.json.DefaultJsonBindersFactory
 import com.hypertino.binders.value.{Obj, Text}
 import com.hypertino.hyperbus.Hyperbus
 import com.hypertino.hyperbus.model.{Created, ErrorBody, MessagingContext, Unauthorized}
+import com.hypertino.hyperbus.subscribe.Subscribable
 import com.hypertino.inflector.naming.CamelCaseToSnakeCaseConverter
 import com.hypertino.service.config.ConfigLoader
 import com.typesafe.config.Config
@@ -16,7 +17,7 @@ import scaldi.Module
 
 import scala.concurrent.duration._
 
-class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAll with ScalaFutures with Matchers {
+class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAll with ScalaFutures with Matchers with Subscribable {
   implicit val scheduler = monix.execution.Scheduler.Implicits.global
   implicit val mcx = MessagingContext.empty
   bind [Config] to ConfigLoader()

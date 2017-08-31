@@ -8,6 +8,7 @@ import com.hypertino.binders.json.DefaultJsonBindersFactory
 import com.hypertino.binders.value.{Null, Obj, Text, Value}
 import com.hypertino.hyperbus.Hyperbus
 import com.hypertino.hyperbus.model.{BadRequest, Created, ErrorBody, InternalServerError, MessagingContext, Ok, ResponseBase, Unauthorized}
+import com.hypertino.hyperbus.subscribe.Subscribable
 import com.hypertino.inflector.naming.CamelCaseToSnakeCaseConverter
 import com.hypertino.service.control.api.Service
 import com.typesafe.config.Config
@@ -38,7 +39,7 @@ private[authfacebook] case class FacebookError(message: String, @fieldName("type
 
 //private[authfacebook] case class AccessTokenValidationResult(facebookUserId: String)
 
-class AuthFacebookService(implicit val injector: Injector) extends Service with Injectable {
+class AuthFacebookService(implicit val injector: Injector) extends Service with Injectable with Subscribable {
   private implicit val scheduler = inject[Scheduler]
   private val hyperbus = inject[Hyperbus]
   private val config = inject[Config]
