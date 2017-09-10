@@ -15,7 +15,7 @@ import com.typesafe.config.Config
 import monix.eval.Task
 import monix.execution.{Cancelable, Scheduler}
 import org.asynchttpclient.{DefaultAsyncHttpClient, ListenableFuture}
-import org.slf4j.LoggerFactory
+import com.typesafe.scalalogging.StrictLogging
 import scaldi.{Injectable, Injector}
 
 import scala.concurrent.Future
@@ -39,12 +39,10 @@ private[authfacebook] case class FacebookError(message: String, @fieldName("type
 
 //private[authfacebook] case class AccessTokenValidationResult(facebookUserId: String)
 
-class AuthFacebookService(implicit val injector: Injector) extends Service with Injectable with Subscribable {
+class AuthFacebookService(implicit val injector: Injector) extends Service with Injectable with Subscribable with StrictLogging {
   private implicit val scheduler = inject[Scheduler]
   private val hyperbus = inject[Hyperbus]
   private val config = inject[Config]
-  private val log = LoggerFactory.getLogger(getClass)
-  log.info("AuthFacebookService started")
 
   import com.hypertino.binders.config.ConfigBinders._
   private val serviceConfig = config.read[AuthFacebookServiceConfig]("facebook")
@@ -55,7 +53,9 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
   val keyFields = Map("email" → "email")
 
   // todo: support scheme configuration + backward compatibility?
-  private val handlers = hyperbus.subscribe(this, log)
+  private val handlers = hyperbus.subscribe(this, logger)
+
+  logger.info("AuthFacebookService started")
 
   def onValidationsPost(implicit post: ValidationsPost): Task[ResponseBase] = {
     validateAuthorizationHeader(post.body.authorization).map { case (facebookUserId, fields) ⇒
@@ -87,7 +87,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
           (facebookUserId, value)
 
         case (Some(facebookUserId), Failure(ex)) ⇒
-          log.warn(s"Can't get Facebook user details with token", ex)
+          logger.warn(s"Can't get Facebook user details with token", ex)
           (facebookUserId, Null)
 
         case _ ⇒
@@ -108,7 +108,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
           case Success(t) if t.isValid && t.appId == serviceConfig.appId ⇒
             Some(t.userId)
           case _ ⇒
-            log.debug(s"Facebook token is not valid: $jsonString")
+            logger.debug(s"Facebook token is not valid: $jsonString")
             None
         }
       }
@@ -117,7 +117,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
       }
     } onErrorRecoverWith {
       case NonFatal(e) ⇒
-        log.debug("Facebook token validation failed", e)
+        logger.debug("Facebook token validation failed", e)
         Task.eval(None)
     }
   }
@@ -130,9 +130,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
       if (httpResponse.getStatusCode == 200) {
         import com.hypertino.binders.json.JsonBinders._
         val jsonString = httpResponse.getResponseBody(StandardCharsets.UTF_8)
-        if (log.isDebugEnabled) {
-          log.debug(s"Response to /me: $jsonString")
-        }
+        logger.debug(s"Response to /me: $jsonString")
         val value = jsonString.parseJson[Value]
         if (value.error != Null) {
           val error = value.error.to[FacebookError]
@@ -143,9 +141,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
       else {
         val error = InternalServerError(ErrorBody("facebook-failure", Some(s"/me request returned ${httpResponse.getStatusCode}")))
         val response = httpResponse.getResponseBody(StandardCharsets.UTF_8)
-        if (log.isDebugEnabled) {
-          log.debug(s"${error.body.description.get} #${error.body.errorId}: $response")
-        }
+        logger.debug(s"${error.body.description.get} #${error.body.errorId}: $response")
         throw error
       }
     }
@@ -166,6 +162,6 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
   override def stopService(controlBreak: Boolean, timeout: FiniteDuration): Future[Unit] = Future {
     asyncHttpClient.close()
     handlers.foreach(_.cancel())
-    log.info("AuthFacebookService stopped")
+    logger.info("AuthFacebookService stopped")
   }
 }
