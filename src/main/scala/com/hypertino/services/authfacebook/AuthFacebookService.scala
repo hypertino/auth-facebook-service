@@ -49,13 +49,16 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
   private val asyncHttpClient = new DefaultAsyncHttpClient
 
   // todo: configurable field name?
-  val fbuName = "facebook_user_id"
-  val keyFields = Map("email" → "email")
+  private val fbuName = "facebook_user_id"
+  private val keyFields = Map("email" → "email")
 
   // todo: support scheme configuration + backward compatibility?
   private val handlers = hyperbus.subscribe(this, logger)
 
-  logger.info("AuthFacebookService started")
+  // todo: configurable retry count
+  private val RETRY_COUNT = 3
+
+  logger.info(s"${getClass.getName} is STARTED")
 
   def onValidationsPost(implicit post: ValidationsPost): Task[ResponseBase] = {
     validateAuthorizationHeader(post.body.authorization).map { case (facebookUserId, fields) ⇒
@@ -96,11 +99,16 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
     }
   }
 
-  private def validateAccessToken(accessToken: String): Task[Option[String]] = {
-    val get = asyncHttpClient.prepareGet(s"https://graph.facebook.com/debug_token")
-    get.addQueryParam("input_token", accessToken)
-    get.addQueryParam("access_token", serviceConfig.appToken)
-    taskFromListenableFuture(get.execute()).map { httpResponse ⇒
+  private def validateAccessToken(accessToken: String)(implicit mcx: MessagingContext): Task[Option[String]] = {
+    Task.eval {
+      val get = asyncHttpClient.prepareGet(s"https://graph.facebook.com/debug_token")
+      get.addQueryParam("input_token", accessToken)
+      get.addQueryParam("access_token", serviceConfig.appToken)
+      taskFromListenableFuture(get.execute())
+    }
+      .flatten
+      .onErrorRestart(RETRY_COUNT)
+      .map { httpResponse ⇒
       if (httpResponse.getStatusCode == 200) {
         import com.hypertino.binders.json.JsonBinders._
         val jsonString = httpResponse.getResponseBody(StandardCharsets.UTF_8)
@@ -118,15 +126,20 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
     } onErrorRecoverWith {
       case NonFatal(e) ⇒
         logger.debug("Facebook token validation failed", e)
-        Task.eval(None)
+        Task.raiseError(InternalServerError(ErrorBody("facebook-token-validation-failed", Some(e.toString))))
     }
   }
 
   private def getFields(accessToken: String)(implicit mcx: MessagingContext): Task[Value] = {
-    val get = asyncHttpClient.prepareGet(s"https://graph.facebook.com/v2.10/me")
-    get.addQueryParam("access_token", accessToken)
-    get.addQueryParam("fields", serviceConfig.extraFields.mkString(","))
-    taskFromListenableFuture(get.execute()).map { httpResponse ⇒
+    Task.eval {
+      val get = asyncHttpClient.prepareGet(s"https://graph.facebook.com/v2.10/me")
+      get.addQueryParam("access_token", accessToken)
+      get.addQueryParam("fields", serviceConfig.extraFields.mkString(","))
+      taskFromListenableFuture(get.execute())
+    }
+      .flatten
+      .onErrorRestart(RETRY_COUNT)
+      .map { httpResponse ⇒
       if (httpResponse.getStatusCode == 200) {
         import com.hypertino.binders.json.JsonBinders._
         val jsonString = httpResponse.getResponseBody(StandardCharsets.UTF_8)
@@ -162,6 +175,6 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
   override def stopService(controlBreak: Boolean, timeout: FiniteDuration): Future[Unit] = Future {
     asyncHttpClient.close()
     handlers.foreach(_.cancel())
-    logger.info("AuthFacebookService stopped")
+    logger.info(s"${getClass.getName} is STOPPED")
   }
 }
