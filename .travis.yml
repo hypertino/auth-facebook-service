@@ -21,7 +21,7 @@ git:
 before_install:
   - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
   - git submodule update --init
-  - sed -i 's/git@github.com:/https:\/\/github.com\//' api/auth-basic-service-api/.gitmodules
+  - sed -i 's/git@github.com:/https:\/\/github.com\//' api/auth-facebook-service-api/.gitmodules
   - git submodule update --init --recursive
 
 env:
