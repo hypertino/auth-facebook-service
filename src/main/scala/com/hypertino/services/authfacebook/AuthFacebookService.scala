@@ -145,8 +145,8 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
         val jsonString = httpResponse.getResponseBody(StandardCharsets.UTF_8)
         logger.debug(s"Response to /me: $jsonString")
         val value = jsonString.parseJson[Value]
-        if (value.error != Null) {
-          val error = value.error.to[FacebookError]
+        if (value.dynamic.error != Null) {
+          val error = value.dynamic.error.to[FacebookError]
           throw BadRequest(ErrorBody(code=error.typ, description=Some(error.message)))
         }
         value

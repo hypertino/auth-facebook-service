@@ -4,3 +4,6 @@
 [submodule "api/user-service-api"]
 	path = api/user-service-api
 	url = git@github.com:hypertino/user-service-api.git
+[submodule "travis"]
+	path = travis
+	url = git@github.com:hypertino/scala-travis-script.git

@@ -1,22 +1,29 @@
 language: scala
+
 scala:
-- 2.11.8
+  - 2.12.3
+  - 2.11.11
+
 sudo: false
-script: $TRAVIS_BUILD_DIR/travis/build.sh
+script: $TRAVIS_BUILD_DIR/travis/script/build.sh
+
 jdk:
-- oraclejdk8
+  - oraclejdk8
+
 cache:
   directories:
   - $HOME/.m2
   - $HOME/.ivy2
   - $HOME/.sbt
+
 git:
   submodules: false
 before_install:
-- sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
-- git submodule update --init
-- sed -i 's/git@github.com:/https:\/\/github.com\//' api/auth-facebook-service-api/.gitmodules
-- git submodule update --init --recursive
+  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
+  - git submodule update --init
+  - sed -i 's/git@github.com:/https:\/\/github.com\//' api/auth-basic-service-api/.gitmodules
+  - git submodule update --init --recursive
+
 env:
   global:
   - secure: iZVHHZigp3I9Lz5iMxFjzBJhAocBo/yG9l/U75T+w9ZRhqNuhnYIFWwm1UTkwBoYWZDySUBWSnuWlZ7nY5G0nCZeMVlQ0NHZIS8OfjbWWVqGRf1sg0pUUD0rc6PCXfDGYXHGPDpOdtr0mN4WfM1teU5souwSKotuLezhoeOEUTFB/rBcfCe3CORPJ1ddDRoW9jeQ8n/c+bumdMb4Z1b07+lo+zboABHUO6Phl2I1izkhs/T85rwFtDccab458fIDf8q86xl5BC9t4A3aQshBnFjkbKVO/zYju+22IZi5HZkKXZ3ZtJ9AEhp+R0iqQhX9D7JljEJWFwCqpXNz16YpykKXRISPUae37jUY/nS4GdwObeJXOWPg5s8op7ecEfjdrAuzi5BlWHLpLz0HFNK/T49FJD3jcizGi7HmPFGtL0oRgs8opG4UowhStOvQtDBxgHp2f8lzELSO+gj8to+rZY8vIsuiNYVaPAiLiFtRy6qyVnz6SeZpBaPG9RisQ/exLFaVE9dnor9suNqizyLtY02UiPfJFQdk2cvQrj9KBAGHX/embVLgp3MqBFqEQUGvnN6yIG5AqrSei0ZjoD9xilMaioniTRDCgzlVZrGoD8MFFGG6ZWB2Zv35H5tv1tEfgYZrvAD/ntGg1xptC/BRQiYuvROt+U83cJP5fv+xZbY=
