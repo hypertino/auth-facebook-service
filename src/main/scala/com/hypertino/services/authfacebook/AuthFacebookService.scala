@@ -23,7 +23,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
-private[authfacebook] case class AuthFacebookServiceConfig(appId: String, appToken: String, extraFields: Seq[String] = Seq("email"))
+private[authfacebook] case class AuthFacebookServiceConfig(baseUrl: String = "https://graph.facebook.com", appId: String, appToken: String, extraFields: Seq[String] = Seq("email"))
 private[authfacebook] case class TokenDebugResult(
                                                  appId: String,
                                                  application: String,
@@ -101,7 +101,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
 
   private def validateAccessToken(accessToken: String)(implicit mcx: MessagingContext): Task[Option[String]] = {
     Task.eval {
-      val get = asyncHttpClient.prepareGet(s"https://graph.facebook.com/debug_token")
+      val get = asyncHttpClient.prepareGet(s"${serviceConfig.baseUrl}/debug_token")
       get.addQueryParam("input_token", accessToken)
       get.addQueryParam("access_token", serviceConfig.appToken)
       taskFromListenableFuture(get.execute())
@@ -132,7 +132,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
 
   private def getFields(accessToken: String)(implicit mcx: MessagingContext): Task[Value] = {
     Task.eval {
-      val get = asyncHttpClient.prepareGet(s"https://graph.facebook.com/v2.10/me")
+      val get = asyncHttpClient.prepareGet(s"${serviceConfig.baseUrl}/v2.10/me")
       get.addQueryParam("access_token", accessToken)
       get.addQueryParam("fields", serviceConfig.extraFields.mkString(","))
       taskFromListenableFuture(get.execute())
