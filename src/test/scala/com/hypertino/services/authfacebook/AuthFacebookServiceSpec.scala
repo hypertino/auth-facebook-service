@@ -63,7 +63,7 @@ class AuthFacebookServiceSpec extends FlatSpec with Module with BeforeAndAfterAl
 
     r shouldBe a[Unauthorized[_]]
     val b = r.asInstanceOf[Unauthorized[ErrorBody]].body
-    b.code shouldBe "facebook-token-is-not-valid"
+    b.code shouldBe "facebook_token_is_not_valid"
   }
 
   "TokenDebugResultData" should "deserialize" in {
