@@ -7,10 +7,11 @@ import com.hypertino.binders.annotations.fieldName
 import com.hypertino.binders.json.DefaultJsonBindersFactory
 import com.hypertino.binders.value.{Null, Obj, Text, Value}
 import com.hypertino.hyperbus.Hyperbus
-import com.hypertino.hyperbus.model.{BadRequest, Created, ErrorBody, InternalServerError, MessagingContext, Ok, ResponseBase, Unauthorized}
+import com.hypertino.hyperbus.model.{BadRequest, Created, ErrorBody, InternalServerError, MessagingContext, ResponseBase, Unauthorized}
 import com.hypertino.hyperbus.subscribe.Subscribable
 import com.hypertino.inflector.naming.CamelCaseToSnakeCaseConverter
 import com.hypertino.service.control.api.Service
+import com.hypertino.services.authfacebook.utils.ErrorCode
 import com.typesafe.config.Config
 import monix.eval.Task
 import monix.execution.{Cancelable, Scheduler}
@@ -80,7 +81,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
   private def validateAuthorizationHeader(authorization: String)(implicit mcx: MessagingContext): Task[(String, Value)] = {
     val spaceIndex = authorization.indexOf(" ")
     if (spaceIndex < 0 || authorization.substring(0, spaceIndex).compareToIgnoreCase("facebook") != 0) {
-      Task.raiseError(BadRequest(ErrorBody("format-error")))
+      Task.raiseError(BadRequest(ErrorBody(ErrorCode.FORMAT_ERROR)))
     }
     else {
       val accessToken = authorization.substring(spaceIndex + 1).trim
@@ -94,7 +95,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
           (facebookUserId, Null)
 
         case _ ⇒
-          throw Unauthorized(ErrorBody("facebook-token-is-not-valid", Some(s"Provided Facebook token isn't valid")))
+          throw Unauthorized(ErrorBody(ErrorCode.FACEBOOK_TOKEN_IS_NOT_VALID, Some(s"Provided Facebook token isn't valid")))
       }
     }
   }
@@ -126,7 +127,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
     } onErrorRecoverWith {
       case NonFatal(e) ⇒
         logger.debug("Facebook token validation failed", e)
-        Task.raiseError(InternalServerError(ErrorBody("facebook-token-validation-failed", Some(e.toString))))
+        Task.raiseError(InternalServerError(ErrorBody(ErrorCode.FACEBOOK_TOKEN_VALIDATION_FAILED, Some(e.toString))))
     }
   }
 
@@ -152,7 +153,7 @@ class AuthFacebookService(implicit val injector: Injector) extends Service with 
         value
       }
       else {
-        val error = InternalServerError(ErrorBody("facebook-failure", Some(s"/me request returned ${httpResponse.getStatusCode}")))
+        val error = InternalServerError(ErrorBody(ErrorCode.FACEBOOK_FAILURE, Some(s"/me request returned ${httpResponse.getStatusCode}")))
         val response = httpResponse.getResponseBody(StandardCharsets.UTF_8)
         logger.debug(s"${error.body.description.get} #${error.body.errorId}: $response")
         throw error
