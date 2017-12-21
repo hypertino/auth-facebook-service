@@ -4,14 +4,14 @@ scalaVersion := crossScalaVersions.value.head
 
 lazy val `auth-service` = project in file(".") enablePlugins Raml2Hyperbus settings (
     name := "auth-facebook-service",
-    version := "0.3-SNAPSHOT",
+    version := "0.4-SNAPSHOT",
     organization := "com.hypertino",  
     resolvers ++= Seq(
       Resolver.sonatypeRepo("public")
     ),
     libraryDependencies ++= Seq(
       "com.hypertino" %% "hyperbus" % "0.4-SNAPSHOT",
-      "com.hypertino" %% "service-control" % "0.3.0",
+      "com.hypertino" %% "service-control" % "0.4.1",
       "com.hypertino" %% "typesafe-config-binders" % "0.2.0",
       "org.asynchttpclient" % "async-http-client" % "2.0.37",
       "com.hypertino" %% "hyperbus-t-inproc" % "0.4-SNAPSHOT" % "test",
